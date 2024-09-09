@@ -1,0 +1,27 @@
+{
+  "name": "appintroductions",
+  "version": "1.0.0",
+  "description": "A dating site project",
+  "main": "server.js",
+  "scripts": {
+    "test": "jest",
+    "start": "node server.js",
+    "intro": "nodemon server.js"
+  },
+  "author": "Lady Beerah",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-async-handler": "^1.2.0",
+    "i": "^0.3.7",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.8.0",
+    "mongoose": "^8.5.3",
+    "nodemon": "^3.1.4",
+    "twilio": "^5.2.2"
+  }
+}
