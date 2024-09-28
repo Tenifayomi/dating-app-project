@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 
-const {registerUser, logInUser, preferences, getMatched, singleUser, updateAbout} = require('../Controllers/userController')
+const {registerUser, logInUser, preferences, getMatched, singleUser, updateUserDetails, deleteUser} = require('../Controllers/userController')
 const { sendOtp } = require('../Controllers/otpController')
 
 
@@ -11,7 +11,10 @@ router.post('/login', logInUser)
 router.put('/preference/:id', preferences)
 router.get('/match/:id', getMatched)
 router.get('/getone/:id', singleUser)
-router.put('/about/:id', updateAbout)
+router.put('/about/:id', updateUserDetails)
+router.delete('/delete/:id', deleteUser)
+
+// protect middleware
 
 
 module.exports = router 

@@ -1,9 +1,5 @@
 const mongoose = require('mongoose')
 
-
-const passionEnum = ['Photography', 'Shopping', 'Karaoke', 'Yoga','Cooking', 'Tennis', 'Run', 'Swimming', 
-    'Art', 'Traveling', 'Extreme', 'Music', 'Drink', 'Video Games']
-
 const userSchema = mongoose.Schema({
     email:{
         type:String,
@@ -12,7 +8,7 @@ const userSchema = mongoose.Schema({
     },
     phonenumber:{
         type:Number,
-        required:[true, "Phone number cannot be less than 11 characters"],
+        required:true,
         unique:true
     },
     password:{
@@ -25,6 +21,10 @@ const userSchema = mongoose.Schema({
     },
     lastname:{
         type:String,
+    },
+    nickname:{
+        type:String,
+       // required:[true, "Nickname is required"]
     },
     age:{
         type:Number
@@ -41,17 +41,16 @@ const userSchema = mongoose.Schema({
     },
     gender:{
       type:String,
-      enum:['Male', 'Female']
+     // enum:['Male', 'Female']
     },
     genderPreference:{
         type:String,
         enum: ['Male', 'Female'],
     },
     passions:{
-        type:[{
-            type:String,
-            enum:passionEnum
-        }],
+       type:String,
+       //enum:passionEnum
+
         // validate: {
         //     validator: function(value) {
         //         return value.length > 2; 
