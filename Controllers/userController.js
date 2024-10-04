@@ -1,7 +1,8 @@
 const User = require('../Models/User')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
-const expressHandler=require('express-async-handler')
+const expressHandler = require('express-async-handler')
+const sendMail = require("../Utilities/email")
 
 // Generating Token
 const generateToken = (id)=>{
@@ -15,10 +16,10 @@ const registerUser =expressHandler(async(req, res)=>{
     try {
         //Validation
         if(!email || !phonenumber ||!password){
-            return res.status(400).json("All fields must be filled")
+            return res.status(400).json({message:"All fields must be filled"})
         }
         if(password.length < 4){
-            return res.status(400).json("Password cannot be less than 4 characters")
+            return res.status(400).json({message:"Password cannot be less than 4 characters"})
         }
 // Hashing of password
         const salt = bcrypt.genSaltSync(10)
@@ -53,7 +54,7 @@ const registerUser =expressHandler(async(req, res)=>{
             password:hashedPassword,
             nickname:nickname
         })
-
+       
         const token = generateToken(createdUser._id)
 
         if(createdUser){
@@ -108,7 +109,7 @@ const getMatched = expressHandler(async(req,res)=>{
                 $gte:currentUser.minAgePreference, // To match the current user's age preference within the age range
                 $lte: currentUser.maxAgePreference
             },
-            minAgePreference:{$lte: currentUser.age}, // To ensure the other users'prefer the current user's age prefernce
+            minAgePreference:{$lte: currentUser.age}, // To ensure the other users'prefer the current user's age preference
             maxAgePreference:{$gte: currentUser.age}
             })
         if(!match){
@@ -120,7 +121,7 @@ const getMatched = expressHandler(async(req,res)=>{
         return res.status(500).json(error.message)
     }
 })
-
+ 
 
 
 //update about
@@ -172,7 +173,9 @@ const logInUser = expressHandler (async(req, res)=>{
        if(userExists && correctPwd){
         const {id, email, nickname} = userExists
         const Token = generateToken(id)
-        return res.status(200).json(id, email, Token,nickname)
+        return res.status(200).json ({id, email, Token, nickname})
+       }else{
+        return res.status(400).json({message: 'Password or email is incorrect'})
        }
     
     } catch (error) {
@@ -197,6 +200,46 @@ const singleUser = expressHandler(async(req, res)=>{
 })
 
 // Reset password
+const resetPassword = expressHandler(async (req, res)=>{
+    const{id, currentPassword, newPassword}=req.body
+    try {
+        const userExist = await User.findById(id)
+        if(!userExist){
+            return res.status(404).json('User not found')
+        }
+        // Check if the current password matches the hashed password in the database
+        const isMatch = await bcrypt.compare(currentPassword, userExist.password)
+        if(!isMatch){
+            return res.status(400).json({message:'Current Password is incorrect'})
+        }
+        //Hash new password
+        const salt = bcrypt.genSaltSync(10)
+        const hashNewPassword = bcrypt.hashSync(newPassword, salt)
+
+        //update new password to database
+        if(userExist.password = hashNewPassword){
+            await userExist.save();
+            return res.status(200).json({message:'Password updated successfully'})
+        };
+    } catch (error) {
+        return res.status(500).json(error.message)
+    }
+}
+)
+
+//Forgot Password
+const forgotPwd = expressHandler(async (req, res)=>{
+    const{email}=req.body
+    try {
+        const userExists = await User.findOne({email})
+        if(!userExists){
+            return res.status(400).json({message:'Wrong email'})
+        }
+    } catch (error) {
+        return res.status(500).json(error.message)
+        
+    }
+})
 
 // delete account
 const deleteUser = expressHandler( async(req, res)=>{
@@ -214,5 +257,5 @@ const deleteUser = expressHandler( async(req, res)=>{
 })
 
 module.exports = {
-    registerUser, logInUser, preferences, getMatched, singleUser, updateUserDetails, deleteUser
+    registerUser, logInUser, preferences, getMatched, singleUser, updateUserDetails, deleteUser, resetPassword
 }
