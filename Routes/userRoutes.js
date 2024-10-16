@@ -1,7 +1,7 @@
 const express = require('express')
 const router = express.Router()
 
-const {registerUser, logInUser, preferences, getMatched, singleUser, updateUserDetails, deleteUser, resetPassword} = require('../Controllers/userController')
+const {registerUser, logInUser, preferences, getMatched, singleUser, updateUserDetails, deleteUser, changePassword, forgotPwd} = require('../Controllers/userController')
 const { sendOtp } = require('../Controllers/otpController')
 
 
@@ -13,7 +13,8 @@ router.get('/match/:id', getMatched)
 router.get('/getone/:id', singleUser)
 router.put('/about/:id', updateUserDetails)
 router.delete('/delete/:id', deleteUser)
-router.post('/reset-password', resetPassword)
+router.post('/change-password', changePassword)
+router.put('/forgotpwd', forgotPwd)
 
 // protect middleware
 

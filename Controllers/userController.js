@@ -2,7 +2,9 @@ const User = require('../Models/User')
 const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 const expressHandler = require('express-async-handler')
+const nodemailer = require('nodemailer')
 const sendMail = require("../Utilities/email")
+
 
 // Generating Token
 const generateToken = (id)=>{
@@ -11,7 +13,7 @@ const generateToken = (id)=>{
 }
 
 // Registration
-const registerUser =expressHandler(async(req, res)=>{
+const registerUser = expressHandler(async(req, res)=>{
     const{email, phonenumber, password, firstname, lastname, age, gender, passions,nickname,about} = req.body
     try {
         //Validation
@@ -54,7 +56,14 @@ const registerUser =expressHandler(async(req, res)=>{
             password:hashedPassword,
             nickname:nickname
         })
-       
+        const subject = `Welcome to Our App!`
+        const html = `
+        <p>Hi ${nickname},</p>
+        <p>Thank you for signing up to our app! We are excited to have you onboard.</p>
+        <p>Best regards,<br>Sex and the City</p>`
+
+       sendMail(createdUser.email,subject,html)
+
         const token = generateToken(createdUser._id)
 
         if(createdUser){
@@ -199,8 +208,8 @@ const singleUser = expressHandler(async(req, res)=>{
     }
 })
 
-// Reset password
-const resetPassword = expressHandler(async (req, res)=>{
+// change password
+const changePassword = expressHandler(async (req, res)=>{
     const{id, currentPassword, newPassword}=req.body
     try {
         const userExist = await User.findById(id)
@@ -230,16 +239,73 @@ const resetPassword = expressHandler(async (req, res)=>{
 //Forgot Password
 const forgotPwd = expressHandler(async (req, res)=>{
     const{email}=req.body
-    try {
+try{ 
         const userExists = await User.findOne({email})
         if(!userExists){
-            return res.status(400).json({message:'Wrong email'})
+            return res.status(400).json({message:'User not found'})
         }
-    } catch (error) {
-        return res.status(500).json(error.message)
-        
-    }
-})
+        const token = generateToken(userExists._id);
+ 
+        const Transporter= nodemailer.createTransport({
+            service:'gmail', 
+            host:"smtp.gmail.com",
+            port:587,
+            secure:false,
+            auth:{
+            user:process.env.THE_EMAIL, //Sender gmail address
+            pass:process.env.EMAIL_PASSWORD // App pwd from gmail
+            } 
+        });
+            const reciever = {
+                from:{
+                    name: "Sex and the City",
+                    address: process.env.THE_EMAIL
+                },
+              to: email,    // Recipient's email
+              subject: "Forgot Password Request",    // Subject of the email
+              text:`Click on this link to generate your new password ${process.env.CLIENT_URL}/reset-password
+              ${token}`     // Plain text body
+            };
+                await Transporter.sendMail(reciever)
+                return res.status (200).json({message:"Password reset link has been sent to your gmail account"})
+                //console.log({message: 'Password reset link sent successfully. Please check gmail to reset your password'});
+              } catch (error) {
+                console.error('Error sending email:', error);
+                throw error;  // You can handle the error in the controller
+              }
+            }
+         )
+
+
+// Reset password
+// const forgotPassword = async (req, res) => {
+//   const { token, newPassword } = req.body;
+
+//   try {
+//     // Find the user by the reset token and ensure the token is still valid
+//     const user = await User.findOne({
+//       resetToken: token,
+//       resetTokenExpiry: { $gt: Date.now() }, // Ensure token is not expired
+//     });
+
+//     if (!user) {
+//       return res.status(400).json({ message: 'Invalid or expired token' });
+//     }
+
+//     // Update the user's password
+//     user.password = newPassword; // Hash this password before saving (bcrypt)
+//     user.resetToken = undefined;
+//     user.resetTokenExpiry = undefined;
+//     await user.save();
+
+//     res.status(200).json({ message: 'Password reset successful' });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// };
+
+
+
 
 // delete account
 const deleteUser = expressHandler( async(req, res)=>{
@@ -257,5 +323,13 @@ const deleteUser = expressHandler( async(req, res)=>{
 })
 
 module.exports = {
-    registerUser, logInUser, preferences, getMatched, singleUser, updateUserDetails, deleteUser, resetPassword
+    registerUser, 
+    logInUser,
+     preferences,
+      getMatched,
+       singleUser,
+        updateUserDetails, 
+        deleteUser, 
+        changePassword, 
+        forgotPwd,
 }

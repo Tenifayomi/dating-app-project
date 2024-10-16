@@ -24,7 +24,7 @@ const userSchema = mongoose.Schema({
     },
     nickname:{
         type:String,
-       // required:[true, "Nickname is required"]
+       required:[true, "Nickname is required"]
     },
     age:{
         type:Number
