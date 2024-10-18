@@ -8,7 +8,7 @@ const sendMail = require("../Utilities/email")
 
 // Generating Token
 const generateToken = (id)=>{
-     // id, private key, (options) 
+     // id, private key, (options)
    return jwt.sign({userId: id}, process.env.JWT_SECRET, {expiresIn:'1d'})
 }
 
@@ -62,20 +62,26 @@ const registerUser = expressHandler(async(req, res)=>{
         <p>Thank you for signing up to our app! We are excited to have you onboard.</p>
         <p>Best regards,<br>Sex and the City</p>`
 
-       sendMail(createdUser.email,subject,html)
+        sendMail(createdUser.email,subject,html)
 
         const token = generateToken(createdUser._id)
+        //  res.cookie("jwt", token, {
+        //     path:'/',
+        //     httpOnly: true,
+        //     expires: new Date(Date.now() + 1000 * 24),
+        //     sameSite: "none",
+        //     secure:true
+        //  })
 
         if(createdUser){
             const{email, phonenumber, password} = createdUser
-            return res.status(200).json({email, phonenumber, password, age, firstname, lastname, passions, gender, token, nickname})
+            return res.status(201).json({email, phonenumber, password, age, firstname, lastname, passions, gender, token, nickname})
         }
-    
     } catch (error) {
-        return res.status(500).json(error.message)
+        return res.status(400).json(error.message)
     }
+    });
 
-    }) 
 //Choose preferences or criteria that determines matches
 const preferences = expressHandler(async (req,res)=>{
     const{id}= req.params
@@ -93,7 +99,7 @@ const preferences = expressHandler(async (req,res)=>{
     if(updateUser){
         return res.status(200).json(updateUser)
     }else{
-        return res.status(404).json('An error ocurred')
+        return res.status(400).json('An error ocurred')
     }
 })
 
@@ -129,10 +135,8 @@ const getMatched = expressHandler(async(req,res)=>{
     } catch (error) {
         return res.status(500).json(error.message)
     }
-})
+});
  
-
-
 //update about
 const updateUserDetails = expressHandler(async(req, res)=>{
  const {id} = req.params
@@ -155,13 +159,12 @@ const updateUserDetails = expressHandler(async(req, res)=>{
     if(updateAbout){
         return res.status(200).json(updateAbout)
     }else{
-        return res.status(404).json('An error ocurred')
+        return res.status(400).json('An error ocurred')
     }
  } catch (error) {
     return res.status(500).json(error.message)
-    
  }
-})
+});
 
 // User Log In
 const logInUser = expressHandler (async(req, res)=>{
@@ -174,17 +177,17 @@ const logInUser = expressHandler (async(req, res)=>{
         // check if email does not exist
         const userExists = await User.findOne({email})
         if(!userExists){
-            return res.status(400).json('Wrong email')
+            return res.status(400).json({message: 'Wrong email'})
         }
-        // check if password exists 
+        // check if password exists
        const correctPwd = bcrypt.compareSync(password, userExists.password)
-    
        if(userExists && correctPwd){
         const {id, email, nickname} = userExists
         const Token = generateToken(id)
+        // res.cookie('jwt', Token, {httpOnly: true, secure:true, expires: new Date(Date.now() + 1000 * 24)})
         return res.status(200).json ({id, email, Token, nickname})
        }else{
-        return res.status(400).json({message: 'Password or email is incorrect'})
+        return res.status(400).json({message: 'Password is incorrect'})
        }
     
     } catch (error) {
@@ -245,7 +248,8 @@ try{
             return res.status(400).json({message:'User not found'})
         }
         const token = generateToken(userExists._id);
- 
+        console.log(token);
+        
         const Transporter= nodemailer.createTransport({
             service:'gmail', 
             host:"smtp.gmail.com",
@@ -256,17 +260,16 @@ try{
             pass:process.env.EMAIL_PASSWORD // App pwd from gmail
             } 
         });
-            const reciever = {
+            const receiver = {
                 from:{
                     name: "Sex and the City",
                     address: process.env.THE_EMAIL
                 },
               to: email,    // Recipient's email
               subject: "Forgot Password Request",    // Subject of the email
-              text:`Click on this link to generate your new password ${process.env.CLIENT_URL}/reset-password
-              ${token}`     // Plain text body
+              text:`Click on this link to generate your new password ${process.env.CLIENT_URL}/reset-password ${token}`     // Plain text body
             };
-                await Transporter.sendMail(reciever)
+                await Transporter.sendMail(receiver)
                 return res.status (200).json({message:"Password reset link has been sent to your gmail account"})
                 //console.log({message: 'Password reset link sent successfully. Please check gmail to reset your password'});
               } catch (error) {
@@ -278,36 +281,38 @@ try{
 
 
 // Reset password
-// const forgotPassword = async (req, res) => {
-//   const { token, newPassword } = req.body;
+const resetPassword = async (req, res) => {
+  const {newPassword} = req.body;
+  const {token} = req.params
 
-//   try {
-//     // Find the user by the reset token and ensure the token is still valid
-//     const user = await User.findOne({
-//       resetToken: token,
-//       resetTokenExpiry: { $gt: Date.now() }, // Ensure token is not expired
-//     });
+  try {
+    // Find the user by the reset token and ensure the token is still valid
+    const user = await User.findOne({
+      resetToken: token,
+      resetTokenExpiry: {$gt: Date.now() }, // Ensure token is not expired
+    });
 
-//     if (!user) {
-//       return res.status(400).json({ message: 'Invalid or expired token' });
-//     }
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired token' });
+    }
+    // Update the user's password
+    const salt = bcrypt.genSaltSync(10)
+    const hashedPwd = bcrypt.hashSync(newPassword,salt)
+    user.password = hashedPwd; // Hash this password before saving (bcrypt)
+   
+    //clear the reset token and expiry time
+    user.resetToken = undefined;
+    user.resetTokenExpiry = undefined;
+    //save the updated
+    await user.save();
 
-//     // Update the user's password
-//     user.password = newPassword; // Hash this password before saving (bcrypt)
-//     user.resetToken = undefined;
-//     user.resetTokenExpiry = undefined;
-//     await user.save();
+    res.status(200).json({ message: 'Password reset successful' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 
-//     res.status(200).json({ message: 'Password reset successful' });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// };
-
-
-
-
-// delete account
+// Delete account
 const deleteUser = expressHandler( async(req, res)=>{
     const{id} = req.params
     try {
@@ -332,4 +337,5 @@ module.exports = {
         deleteUser, 
         changePassword, 
         forgotPwd,
+        resetPassword
 }

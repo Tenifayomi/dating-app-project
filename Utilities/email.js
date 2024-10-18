@@ -41,9 +41,6 @@ try {
   
    module.exports = sendMail
    
-
-
-
 // module.exports = {
 //     transporter, mailOptions
 // }

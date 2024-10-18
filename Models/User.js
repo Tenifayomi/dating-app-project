@@ -1,10 +1,13 @@
 const mongoose = require('mongoose')
+const {isEmail} = require('validator') // install validator
 
 const userSchema = mongoose.Schema({
     email:{
         type:String,
         required:[true, "Email is required"],
-        unique:true
+        unique:true,
+        lowercase:true,
+        validate: [isEmail, "Please enter a valid email"]
     },
     phonenumber:{
         type:Number,
